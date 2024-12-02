@@ -1,7 +1,5 @@
 import hashlib
-import random
-import time
-from threading import Thread, Lock
+from threading import Lock
 
 class Block:
     """Representa um bloco na blockchain."""
@@ -48,11 +46,8 @@ class Blockchain:
 
     def add_transaction(self, transaction):
         """Adiciona uma transação à lista de transações pendentes."""
-        self.lock.acquire()
-        try:
+        with self.lock:
             self.pending_transactions.append(transaction)
-        finally:
-            self.lock.release()
 
     def mine_pending_transactions(self, miner_id):
         """Minera as transações pendentes e adiciona um novo bloco."""
@@ -69,12 +64,9 @@ class Blockchain:
         print(f"Miner {miner_id}: Mineração iniciada.")
         new_block.mine_block()
 
-        self.lock.acquire()
-        try:
+        with self.lock:
             self.chain.append(new_block)
             self.pending_transactions = []
-        finally:
-            self.lock.release()
 
         print(f"Miner {miner_id}: Bloco minerado com sucesso! Hash: {new_block.hash}")
 
@@ -89,39 +81,3 @@ class Blockchain:
             if current_block.previous_hash != previous_block.hash:
                 return False
         return True
-
-def simulate_node(blockchain, miner_id):
-    """Simula a operação de um nó minerador."""
-    while True:
-        blockchain.mine_pending_transactions(miner_id)
-        time.sleep(random.randint(1, 5))  # Simula o tempo entre tentativas
-
-if __name__ == "__main__":
-    difficulty = 4  # Define a dificuldade para mineração
-    blockchain = Blockchain(difficulty)
-
-    # Adiciona transações pendentes
-    blockchain.add_transaction("Alice paga 10 BTC para Bob")
-    blockchain.add_transaction("Bob paga 5 BTC para Charlie")
-
-    # Simula múltiplos nós mineradores
-    nodes = []
-    for miner_id in range(1, 4):
-        node_thread = Thread(target=simulate_node, args=(blockchain, miner_id))
-        nodes.append(node_thread)
-        node_thread.start()
-
-    # Monitora a blockchain
-    time.sleep(20)  # Tempo de simulação
-    for node in nodes:
-        node.join(timeout=1)  # Aguarda a finalização dos threads
-
-    # Validação e exibição da blockchain
-    if blockchain.validate_chain():
-        print("\nBlockchain validada com sucesso.")
-    else:
-        print("\nErro: Blockchain inválida.")
-
-    print("\nBlocos na Blockchain:")
-    for block in blockchain.chain:
-        print(f"Índice: {block.index}, Hash: {block.hash}, Transações: {block.transactions}")
